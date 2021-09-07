@@ -11,6 +11,8 @@ def main():
     df = merge_mutual_exclusive_cols(df)
     players_df = download_player_infos()
     order_df = pd.DataFrame(columns='Full name,Product,Gender / Type,Size,Name to be printed,Number to be printed,Special Requests,Price,Is kid,Description'.split(','))
+    with open('rotpots.csv') as f:
+        missing_rotpots = f.read().splitlines()
     for _, row in df.iterrows():
         name, items = extract_items(row)
         jersey_name, jersey_number = get_player_info(players_df, name)
@@ -21,14 +23,22 @@ def main():
                 if item.product != Product.SHORT.value:
                     item.jersey_name = jersey_name
             order_df = order_df.append(item.to_series(), ignore_index=True)
-    # print(order_df.to_string())
-    prices_df = calculate_prices(order_df, players_df)
+    payment_dict = download_payment_infos()
+    prices_df = calculate_prices(order_df, players_df, payment_dict, missing_rotpots)
     total_price = prices_df['price'].sum()
+    print(f'missing orders:\n' + '\n'.join(missing_rotpots))
     print(f'TOTAL PRICE: {total_price}€')
     writer = pd.ExcelWriter('summary.xlsx', engine='openpyxl')
     prices_df.to_excel(writer, index=False)
     writer.save()
-    write_order_to_wb(order_df)
+    mask = order_df['Full name'].apply(lambda x: x.lower()) < "m"
+    write_order_to_wb(order_df[mask], suffix=' a-l')
+    write_order_to_wb(order_df[~mask], suffix=' m-z')
+
+
+def download_payment_infos():
+    summary = download_google_sheet_as_df('1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ', gid=2061941269)
+    return dict(zip(summary.Name, summary.Bezahlt))
 
 
 def download_orders():
@@ -48,28 +58,36 @@ def download_player_infos():
         'Rückennummer': 'number',
         'Name auf Trikot': 'jersey_name'
     })
-    # print(players_df.to_string())
     return players_df
 
 
-def download_google_sheet_as_df(id, filename='temp.csv'):
+def download_google_sheet_as_df(id, filename='temp.csv', gid=None):
     if os.path.isfile(filename):
         os.remove(filename)
-    wget.download(f'https://docs.google.com/spreadsheets/d/{id}/export?format=csv', out=filename)
+    gid_str = f'gid={gid}&'if gid else ''
+    wget.download(f'https://docs.google.com/spreadsheets/d/{id}/export?{gid_str}format=csv', out=filename)
     df = pd.read_csv(filename)
     return df
 
 
-def calculate_prices(df, players_df):
-    prices_df = pd.DataFrame(columns='name price num_full_kits summary'.split())
+def calculate_prices(df, players_df, payment_dict, missing_rotpots):
+    prices_df = pd.DataFrame(columns='paid name price num_full_kits summary'.split())
     for name, items in df.groupby('Full name'):
         num_full_kits = calc_num_full_kits(items)
         price = items['Price'].sum() - 10 * num_full_kits
         summary = summarize_order(items)
-        prices_df = prices_df.append({'name': name, 'price': price, 'num_full_kits': num_full_kits, 'summary': summary}, ignore_index=True)
+        paid = payment_dict.get(name, 'Nein') == 'Ja'
+        paid_en = 'yes' if paid else 'no'
+        paid_de = 'Ja' if paid else 'Nein'
+        prices_df = prices_df.append({'paid': paid_de, 'name': name, 'price': price, 'num_full_kits': num_full_kits, 'summary': summary}, ignore_index=True)
         summary_f = ' - ' + summary.replace(', ', '\n - ')
         jersey_name, jersey_number = get_player_info(players_df, name)
-        print(f'{name}:\njersey_name: {jersey_name}\njersey_number: {jersey_number}\n{summary_f}\n num full kits: {num_full_kits}\n total price: {price}€\n')
+        num_items = len(items)
+        if name not in missing_rotpots:
+            print(name, 'not in rotpot list')
+        else:
+            missing_rotpots.remove(name)
+        print(f'{name}:\njersey_name: {jersey_name}\njersey_number: {jersey_number}\n{summary_f}\n num full kits: {num_full_kits}\n total price: {price}€\n paid: {paid_en}\n num items: {num_items}\n')
     return prices_df
 
 
@@ -92,8 +110,8 @@ def calc_num_full_kits(items: pd.DataFrame):
     return num_kits
 
 
-def write_order_to_wb(order_df: pd.DataFrame):
-    sheet_name = 'My order'
+def write_order_to_wb(order_df: pd.DataFrame, suffix=''):
+    sheet_name = 'My order' + suffix
     filename = 'orderform_template.xlsx'
     writer = pd.ExcelWriter(filename, engine='openpyxl', mode='a')
     order_df.to_excel(writer, sheet_name, index=False, header=False)
@@ -192,7 +210,7 @@ class Item:
     def to_string(self):
         kid_str = ' (kid)' if self.is_kid else ''
         color_str = ' ' + self.color.name.lower() if not self.color == Color.DEFAULT else ''
-        return f'{self.product.name.lower()}{kid_str} {self.type_.lower()}{color_str} {self.size} ({self.price}€)'
+        return f'{self.product.name.lower()}{kid_str}{color_str} {self.type_.lower()} {self.size} ({self.price}€)'
 
 
 type2excel = {
@@ -242,6 +260,7 @@ def extract_items(row: pd.Series):
         (Col.NUM_LIGHT, Product.JERSEY, Color.LIGHT),
         (Col.NUM_DARK_LONG, Product.JERSEY_LONG, Color.DARK),
         (Col.NUM_LIGHT_LONG, Product.JERSEY_LONG, Color.LIGHT),
+        (Col.NUM_BLACK_LONG, Product.JERSEY_LONG, Color.BLACK),
         (Col.NUM_DARK_TANK, Product.TANK, Color.DARK),
         (Col.NUM_LIGHT_TANK, Product.TANK, Color.LIGHT),
     ]:
