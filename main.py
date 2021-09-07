@@ -4,15 +4,15 @@ from dataclasses import dataclass
 from typing import Optional
 import os
 import wget
+from datetime import datetime, date
 
 
 def main():
     df = download_orders()
     df = merge_mutual_exclusive_cols(df)
+    df = drop_order_older_than(df, year=2021, month=9, day=1)
     players_df = download_player_infos()
     order_df = pd.DataFrame(columns='Full name,Product,Gender / Type,Size,Name to be printed,Number to be printed,Special Requests,Price,Is kid,Description'.split(','))
-    with open('rotpots.csv') as f:
-        missing_rotpots = f.read().splitlines()
     for _, row in df.iterrows():
         name, items = extract_items(row)
         jersey_name, jersey_number = get_player_info(players_df, name)
@@ -24,16 +24,26 @@ def main():
                     item.jersey_name = jersey_name
             order_df = order_df.append(item.to_series(), ignore_index=True)
     payment_dict = download_payment_infos()
-    prices_df = calculate_prices(order_df, players_df, payment_dict, missing_rotpots)
+    prices_df = calculate_prices(order_df, players_df, payment_dict)
     total_price = prices_df['price'].sum()
-    print(f'missing orders:\n' + '\n'.join(missing_rotpots))
     print(f'TOTAL PRICE: {total_price}€')
     writer = pd.ExcelWriter('summary.xlsx', engine='openpyxl')
     prices_df.to_excel(writer, index=False)
     writer.save()
-    mask = order_df['Full name'].apply(lambda x: x.lower()) < "m"
-    write_order_to_wb(order_df[mask], suffix=' a-l')
-    write_order_to_wb(order_df[~mask], suffix=' m-z')
+    # mask = order_df['Full name'].apply(lambda x: x.lower()) < "m"
+    # write_order_to_wb(order_df[mask], suffix=' a-l')
+    # write_order_to_wb(order_df[~mask], suffix=' m-z')
+
+
+def parse_timestamp(ts):
+    ts = ts.split(' ')[0]
+    return datetime.strptime(ts, '%d.%m.%Y')
+
+
+def drop_order_older_than(df: pd.DataFrame, year, month, day):
+    deadline = datetime(year, month, day)
+    mask = df['Zeitstempel'].apply(parse_timestamp) > deadline
+    return df[mask]
 
 
 def download_payment_infos():
@@ -70,7 +80,7 @@ def download_google_sheet_as_df(id, filename='temp.csv', gid=None):
     return df
 
 
-def calculate_prices(df, players_df, payment_dict, missing_rotpots):
+def calculate_prices(df, players_df, payment_dict):
     prices_df = pd.DataFrame(columns='paid name price num_full_kits summary'.split())
     for name, items in df.groupby('Full name'):
         num_full_kits = calc_num_full_kits(items)
@@ -83,10 +93,6 @@ def calculate_prices(df, players_df, payment_dict, missing_rotpots):
         summary_f = ' - ' + summary.replace(', ', '\n - ')
         jersey_name, jersey_number = get_player_info(players_df, name)
         num_items = len(items)
-        if name not in missing_rotpots:
-            print(name, 'not in rotpot list')
-        else:
-            missing_rotpots.remove(name)
         print(f'{name}:\njersey_name: {jersey_name}\njersey_number: {jersey_number}\n{summary_f}\n num full kits: {num_full_kits}\n total price: {price}€\n paid: {paid_en}\n num items: {num_items}\n')
     return prices_df
 
