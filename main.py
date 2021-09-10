@@ -4,13 +4,17 @@ from dataclasses import dataclass
 from typing import Optional
 import os
 import wget
-from datetime import datetime, date
+from datetime import datetime
 
 
 def main():
+    """
+    download, process, print and write the orders to excel
+    """
     df = download_orders()
     df = merge_mutual_exclusive_cols(df)
-    df = drop_order_older_than(df, year=2021, month=9, day=1)
+    deadline = datetime(year=2021, month=9, day=1)
+    df = drop_order_older_than(df, deadline)
     players_df = download_player_infos()
     order_df = pd.DataFrame(columns='Full name,Product,Gender / Type,Size,Name to be printed,Number to be printed,Special Requests,Price,Is kid,Description'.split(','))
     for _, row in df.iterrows():
@@ -35,18 +39,23 @@ def main():
     # write_order_to_wb(order_df[~mask], suffix=' m-z')
 
 
-def parse_timestamp(ts):
+def parse_timestamp(ts: str) -> datetime:
     ts = ts.split(' ')[0]
     return datetime.strptime(ts, '%d.%m.%Y')
 
 
-def drop_order_older_than(df: pd.DataFrame, year, month, day):
-    deadline = datetime(year, month, day)
+def drop_order_older_than(df: pd.DataFrame, deadline: datetime):
+    """
+    filters the DataFrame df such that only rows with 'Zeitstempel' later than deadline remain
+    """
     mask = df['Zeitstempel'].apply(parse_timestamp) > deadline
     return df[mask]
 
 
-def download_payment_infos():
+def download_payment_infos() -> dict:
+    """
+    downloads information about which players did and did not pay their orders
+    """
     summary = download_google_sheet_as_df('1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ', gid=2061941269)
     return dict(zip(summary.Name, summary.Bezahlt))
 
