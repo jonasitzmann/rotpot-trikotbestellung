@@ -5,13 +5,15 @@ from typing import Optional
 import os
 import wget
 from datetime import datetime
+from force_macros import *
+import shutil
 
 
 def main():
     """
     download, process, print and write the orders to excel
     """
-    df = download_orders()
+    df = download_google_sheet_as_df('1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ', 'formularantworten.csv')
     df = merge_mutual_exclusive_cols(df)
     deadline = datetime(year=2021, month=9, day=1)
     df = drop_order_older_than(df, deadline)
@@ -34,14 +36,18 @@ def main():
     writer = pd.ExcelWriter('summary.xlsx', engine='openpyxl')
     prices_df.to_excel(writer, index=False)
     writer.save()
-    # mask = order_df['Full name'].apply(lambda x: x.lower()) < "m"
-    # write_order_to_wb(order_df[mask], suffix=' a-l')
-    # write_order_to_wb(order_df[~mask], suffix=' m-z')
+    max_items_per_orderform = 200
+    if len(order_df) <= max_items_per_orderform:
+        write_order_to_wb(order_df)
+    else:
+        print('order too large. Splitting in a-l and m-z by prename')
+        mask = order_df['Full name'].apply(lambda x: x.lower()) < "m"
+        write_order_to_wb(order_df[mask], suffix=' a-l')
+        write_order_to_wb(order_df[~mask], suffix=' m-z')
 
 
 def parse_timestamp(ts: str) -> datetime:
-    ts = ts.split(' ')[0]
-    return datetime.strptime(ts, '%d.%m.%Y')
+    return datetime.strptime(ts.split(' ')[0], '%d.%m.%Y')
 
 
 def drop_order_older_than(df: pd.DataFrame, deadline: datetime):
@@ -56,37 +62,23 @@ def download_payment_infos() -> dict:
     """
     downloads information about which players did and did not pay their orders
     """
-    summary = download_google_sheet_as_df('1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ', gid=2061941269)
+    summary = download_google_sheet_as_df('1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ', 'summary.csv', gid=2061941269)
     return dict(zip(summary.Name, summary.Bezahlt))
 
 
-def download_orders():
-    return download_google_sheet_as_df(
-        '1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ',
-        'formularantworten.csv'
-    )
-
-
 def download_player_infos():
-    players_df = download_google_sheet_as_df(
-        '18faU7kEJMGFY7Orl8MvtOYUU21OUFskwfsw3fos85Ww',
-        'players.csv'
-    )
-    players_df = players_df.rename(columns={
-        'Vollständiger Name': 'name',
-        'Rückennummer': 'number',
-        'Name auf Trikot': 'jersey_name'
-    })
+    players_df = download_google_sheet_as_df('18faU7kEJMGFY7Orl8MvtOYUU21OUFskwfsw3fos85Ww', 'players.csv')
+    players_df = players_df.rename(columns={'Vollständiger Name': 'name', 'Rückennummer': 'number', 'Name auf Trikot': 'jersey_name'})
     return players_df
 
 
 def download_google_sheet_as_df(id, filename='temp.csv', gid=None):
+    filename = 'downloaded_tables/' + filename
     if os.path.isfile(filename):
         os.remove(filename)
     gid_str = f'gid={gid}&'if gid else ''
     wget.download(f'https://docs.google.com/spreadsheets/d/{id}/export?{gid_str}format=csv', out=filename)
-    df = pd.read_csv(filename)
-    return df
+    return pd.read_csv(filename)
 
 
 def calculate_prices(df, players_df, payment_dict):
@@ -112,8 +104,7 @@ def summarize_order(items: pd.DataFrame):
     for description, count in counts.iteritems():
         prefix = f'{count}X ' if count > 1 else ''
         summary += prefix + description + ', '
-    summary = summary[:-2]  # remove trailing comma
-    return summary
+    return summary[:-2]  # remove trailing comma
 
 
 def calc_num_full_kits(items: pd.DataFrame):
@@ -126,16 +117,17 @@ def calc_num_full_kits(items: pd.DataFrame):
 
 
 def write_order_to_wb(order_df: pd.DataFrame, suffix=''):
-    sheet_name = 'My order' + suffix
-    filename = 'orderform_template.xlsx'
-    writer = pd.ExcelWriter(filename, engine='openpyxl', mode='a')
+    sheet_name = 'rotpot_order' + suffix
+    template_path = 'templates/orderform_template.xlsx'
+    target_path = 'generated_orderform.xlsx'
+    shutil.copy(template_path, target_path)
+    writer = pd.ExcelWriter(target_path, engine='openpyxl', mode='a')
     order_df.to_excel(writer, sheet_name, index=False, header=False)
     writer.save()
 
 
 def get_player_info(players_df, name):
-    default_number = ''
-    default_name = ''
+    default_number = default_name = ''
     df = players_df[players_df['name'] == name]
     if not len(df):
         print(f'could not find player {name}')
@@ -157,37 +149,6 @@ def merge_mutual_exclusive_cols(df):
     return df
 
 
-class Product(Enum):
-    JERSEY = 'Ohiko'
-    JERSEY_LONG = 'Ohiko_LongSleeves'
-    TANK = 'Tank'
-    SHORT = 'Short'
-    HOODIE_NO_ZIP = 'Argia'
-    HOODIE_ZIP = 'Kanpaia'
-
-
-prices_adult = {
-    Product.JERSEY: 34,
-    Product.JERSEY_LONG: 38,
-    Product.TANK: 29,
-    Product.SHORT: 22,
-    Product.HOODIE_NO_ZIP: 42,
-    Product.HOODIE_ZIP: 49
-}
-
-prices_kid = {
-    Product.JERSEY: 26,
-    Product.JERSEY_LONG: 31,
-    Product.TANK: 23,
-    Product.SHORT: 20
-}
-
-
-class Color(Enum):
-    LIGHT = 'grey'
-    DARK = 'blue'
-    BLACK = 'black'
-    DEFAULT = ''
 
 
 @dataclass
@@ -197,7 +158,7 @@ class Item:
     size: str
     color: Color
     jersey_name: Optional[str]
-    jersey_number: Optional[int]
+    jersey_number: Optional[str]
     price: int = -1
     is_kid: bool = False
     full_name: str = ''
@@ -226,21 +187,6 @@ class Item:
         kid_str = ' (kid)' if self.is_kid else ''
         color_str = ' ' + self.color.name.lower() if not self.color == Color.DEFAULT else ''
         return f'{self.product.name.lower()}{kid_str}{color_str} {self.type_.lower()} {self.size} ({self.price}€)'
-
-
-type2excel = {
-        'Männer': 'Man',
-        'Frauen': 'Woman',
-        'Short unisex multisport': 'Multisport',
-        'Shorts unisex long': 'Long',
-        'Woman tight': 'Tight_Woman',
-        'Kinder': 'Kid'
-    }
-size2excel = {
-        'Sechsjährige': '6',
-        'Achtjährige': '8',
-        'Zehnjährige': '10',
-    }
 
 
 class Col(Enum):
@@ -287,6 +233,7 @@ def extract_items(row: pd.Series):
 
 
 def get_similar_items(row, num: Col, product: Product, type_: Col, size: Col, color=None):
+    items = []
     if num:
         item = Item(
             product,
@@ -295,9 +242,8 @@ def get_similar_items(row, num: Col, product: Product, type_: Col, size: Col, co
             color,
             jersey_name='',
             jersey_number='')
-        return [item] * row[num.value]
-    else:
-        return []
+        items += [item] * row[num.value]
+    return items
 
 
 if __name__ == '__main__':
