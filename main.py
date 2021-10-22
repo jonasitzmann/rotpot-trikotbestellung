@@ -8,6 +8,10 @@ from datetime import datetime
 from force_macros import *
 import shutil
 
+ORDER_START_DAY = 1
+ORDER_START_MOTH = 9
+ORDER_START_YEAR = 2021
+
 
 def main():
     """
@@ -15,7 +19,7 @@ def main():
     """
     df = download_google_sheet_as_df('1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ', 'formularantworten.csv')
     df = merge_mutual_exclusive_cols(df)
-    deadline = datetime(year=2021, month=9, day=1)
+    deadline = datetime(year=ORDER_START_YEAR, month=ORDER_START_MOTH, day=ORDER_START_DAY)
     df = drop_order_older_than(df, deadline)
     players_df = download_player_infos()
     order_df = pd.DataFrame(columns='Full name,Product,Gender / Type,Size,Name to be printed,Number to be printed,Special Requests,Price,Is kid,Description'.split(','))
@@ -33,10 +37,11 @@ def main():
     prices_df = calculate_prices(order_df, players_df, payment_dict)
     total_price = prices_df['price'].sum()
     print(f'TOTAL PRICE: {total_price}€')
-    writer = pd.ExcelWriter('summary.xlsx', engine='openpyxl')
+    writer = pd.ExcelWriter('downloaded_tables/summary.xlsx', engine='openpyxl')
     prices_df.to_excel(writer, index=False)
     writer.save()
     max_items_per_orderform = 200
+    os.makedirs('generated_orders', exist_ok=True)
     if len(order_df) <= max_items_per_orderform:
         write_order_to_wb(order_df)
     else:
@@ -117,9 +122,9 @@ def calc_num_full_kits(items: pd.DataFrame):
 
 
 def write_order_to_wb(order_df: pd.DataFrame, suffix=''):
-    sheet_name = 'rotpot_order' + suffix
+    sheet_name = 'rotpot_order'
     template_path = 'templates/orderform_template.xlsx'
-    target_path = 'generated_orderform.xlsx'
+    target_path = f'generated_orders/orderform{suffix}.xlsx'
     shutil.copy(template_path, target_path)
     writer = pd.ExcelWriter(target_path, engine='openpyxl', mode='a')
     order_df.to_excel(writer, sheet_name, index=False, header=False)
