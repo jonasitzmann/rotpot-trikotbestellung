@@ -1,5 +1,4 @@
 import pandas as pd
-from enum import Enum
 from dataclasses import dataclass
 from typing import Optional
 import os
@@ -8,21 +7,55 @@ from datetime import datetime
 from force_macros import *
 import shutil
 
-ORDER_START_DAY = 1
-ORDER_START_MOTH = 9
-ORDER_START_YEAR = 2021
+order_start = order_end = None
+
+
+rotpot_cfg = dict(
+    form_answers_id='1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ',
+    player_infos_id='18faU7kEJMGFY7Orl8MvtOYUU21OUFskwfsw3fos85Ww',
+    payment_info_id='1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ',
+    payment_info_gid=2061941269,
+    start_date="02.12.2021",
+    end_date=None,
+    prefix='rotpot'
+)
+
+kids_cfg = dict(
+    form_answers_id='18Ngzhzqm-cHI7wrgbRqIamILrAWs6vUpEoRMZ-i5T_c',
+    player_infos_id='1IaqBGPRLDBqFdpOT_YzM2o0eMKb8jv3gM97RKkLuzlk',
+    payment_info_id='18Ngzhzqm-cHI7wrgbRqIamILrAWs6vUpEoRMZ-i5T_c',
+    payment_info_gid=429112404,
+    start_date="02.12.2021",
+    end_date=None,
+    prefix='kids'
+)
 
 
 def main():
+    process_google_forms(**rotpot_cfg)
+    process_google_forms(**kids_cfg)
+
+
+def process_google_forms(form_answers_id, player_infos_id, payment_info_id, payment_info_gid, prefix, start_date=None, end_date=None):
     """
     download, process, print and write the orders to excel
     """
-    df = download_google_sheet_as_df('1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ', 'formularantworten.csv')
+    if prefix:
+        print('\n' + '-' * 40 + '\n' + prefix.upper())
+
+    df = download_google_sheet_as_df(form_answers_id, 'formularantworten.csv')
     df = merge_mutual_exclusive_cols(df)
-    deadline = datetime(year=ORDER_START_YEAR, month=ORDER_START_MOTH, day=ORDER_START_DAY)
-    df = drop_order_older_than(df, deadline)
-    players_df = download_player_infos()
-    order_df = pd.DataFrame(columns='Full name,Product,Gender / Type,Size,Name to be printed,Number to be printed,Special Requests,Price,Is kid,Description'.split(','))
+    if start_date is not None:
+        day, month, year = [int(x) for x in start_date.split('.')]
+        deadline = datetime(year=year, month=month, day=day)
+        df = drop_order_older_than(df, deadline)
+    if end_date is not None:
+        day, month, year = [int(x) for x in end_date.split('.')]
+        deadline = datetime(year=year, month=month, day=day)
+        df = drop_order_later_than(df, deadline)
+    players_df = download_player_infos(player_infos_id)
+    order_df = pd.DataFrame(
+        columns='Full name,Product,Gender / Type,Size,Name to be printed,Number to be printed,Special Requests,Price,Is kid,Description'.split(','))
     for _, row in df.iterrows():
         name, items = extract_items(row)
         jersey_name, jersey_number = get_player_info(players_df, name)
@@ -33,7 +66,7 @@ def main():
                 if item.product != Product.SHORT.value:
                     item.jersey_name = jersey_name
             order_df = order_df.append(item.to_series(), ignore_index=True)
-    payment_dict = download_payment_infos()
+    payment_dict = download_payment_infos(payment_info_id, payment_info_gid)
     prices_df = calculate_prices(order_df, players_df, payment_dict)
     total_price = prices_df['price'].sum()
     print(f'TOTAL PRICE: {total_price}€')
@@ -43,12 +76,12 @@ def main():
     max_items_per_orderform = 200
     os.makedirs('generated_orders', exist_ok=True)
     if len(order_df) <= max_items_per_orderform:
-        write_order_to_wb(order_df)
+        write_order_to_wb(order_df, prefix=prefix)
     else:
         print('order too large. Splitting in a-l and m-z by prename')
         mask = order_df['Full name'].apply(lambda x: x.lower()) < "m"
-        write_order_to_wb(order_df[mask], suffix=' a-l')
-        write_order_to_wb(order_df[~mask], suffix=' m-z')
+        write_order_to_wb(order_df[mask], suffix=' a-l', prefix=prefix)
+        write_order_to_wb(order_df[~mask], suffix=' m-z', prefix=prefix)
 
 
 def parse_timestamp(ts: str) -> datetime:
@@ -63,16 +96,25 @@ def drop_order_older_than(df: pd.DataFrame, deadline: datetime):
     return df[mask]
 
 
-def download_payment_infos() -> dict:
+def drop_order_later_than(df: pd.DataFrame, deadline: datetime):
+    """
+    filters the DataFrame df such that only rows with 'Zeitstempel' older than deadline remain
+    """
+    mask = df['Zeitstempel'].apply(parse_timestamp) <= deadline
+    return df[mask]
+
+
+
+def download_payment_infos(id, gid) -> dict:
     """
     downloads information about which players did and did not pay their orders
     """
-    summary = download_google_sheet_as_df('1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ', 'summary.csv', gid=2061941269)
+    summary = download_google_sheet_as_df(id, 'summary.csv', gid=gid)
     return dict(zip(summary.Name, summary.Bezahlt))
 
 
-def download_player_infos():
-    players_df = download_google_sheet_as_df('18faU7kEJMGFY7Orl8MvtOYUU21OUFskwfsw3fos85Ww', 'players.csv')
+def download_player_infos(id):
+    players_df = download_google_sheet_as_df(id, 'players.csv')
     players_df = players_df.rename(columns={'Vollständiger Name': 'name', 'Rückennummer': 'number', 'Name auf Trikot': 'jersey_name'})
     return players_df
 
@@ -99,7 +141,8 @@ def calculate_prices(df, players_df, payment_dict):
         summary_f = ' - ' + summary.replace(', ', '\n - ')
         jersey_name, jersey_number = get_player_info(players_df, name)
         num_items = len(items)
-        print(f'{name}:\njersey_name: {jersey_name}\njersey_number: {jersey_number}\n{summary_f}\n num full kits: {num_full_kits}\n total price: {price}€\n paid: {paid_en}\n num items: {num_items}\n')
+        # print(f'{name}:\njersey_name: {jersey_name}\njersey_number: {jersey_number}\n{summary_f}\n num full kits: {num_full_kits}\n total price: {price}€\n paid: {paid_en}\n num items: {num_items}\n')
+        print(f'{name}:\njersey_name: {jersey_name}\njersey_number: {jersey_number}\n{summary_f}\n num full kits: {num_full_kits}\n total price: {price}€\n num items: {num_items}\n')
     return prices_df
 
 
@@ -114,17 +157,19 @@ def summarize_order(items: pd.DataFrame):
 
 def calc_num_full_kits(items: pd.DataFrame):
     jerseys = items[items['Product'].isin([Product.JERSEY.value, Product.JERSEY_LONG.value])]
-    num_dark_jerseys = len(jerseys[jerseys['Special Requests'] == Color.DARK.value])
-    num_light_jerseys = len(jerseys[jerseys['Special Requests'] == Color.LIGHT.value])
+    num_dark_jerseys = len(jerseys[jerseys['Special Requests'] == Color.BLUE.value])
+    num_light_jerseys = len(jerseys[jerseys['Special Requests'] == Color.WHITE.value])
     num_shorts = len(items[items['Product'] == Product.SHORT.value])
     num_kits = min(num_shorts, num_light_jerseys, num_dark_jerseys)
     return num_kits
 
 
-def write_order_to_wb(order_df: pd.DataFrame, suffix=''):
+def write_order_to_wb(order_df: pd.DataFrame, prefix='', suffix=''):
     sheet_name = 'rotpot_order'
     template_path = 'templates/orderform_template.xlsx'
-    target_path = f'generated_orders/orderform{suffix}.xlsx'
+    if prefix and not prefix.endswith('_'):
+        prefix += '_'
+    target_path = f'generated_orders/{prefix}orderform{suffix}.xlsx'
     shutil.copy(template_path, target_path)
     writer = pd.ExcelWriter(target_path, engine='openpyxl', mode='a')
     order_df.to_excel(writer, sheet_name, index=False, header=False)
@@ -191,7 +236,9 @@ class Item:
     def to_string(self):
         kid_str = ' (kid)' if self.is_kid else ''
         color_str = ' ' + self.color.name.lower() if not self.color == Color.DEFAULT else ''
-        return f'{self.product.name.lower()}{kid_str}{color_str} {self.type_.lower()} {self.size} ({self.price}€)'
+        type_str = ' ' + self.type_.lower() if self.type_ is not None else ''
+        size_str = ' ' + self.size if self.size is not None else ''
+        return f'{self.product.name.lower()}{kid_str}{color_str}{type_str}{size_str} ({self.price}€)'
 
 
 class Col(Enum):
@@ -216,21 +263,28 @@ class Col(Enum):
     TYPE_HOODIES_ZIP = 'Schnitt (Hoodie mit Reißverschluss)'
     SIZE_HOODIES_ZIP = 'Größe (Hoodie mit Reißverschluss)'
     COMMENTS = 'Sonstige Anmerkungen'
+    NUM_HEADBANDS = 'Anzahl Headbands'
+    NUM_SNOODS_WHITE = 'Anzahl Snoods Weiß'
+    NUM_SNOODS_BLUE = 'Anzahl Snoods Blau'
 
 
 def extract_items(row: pd.Series):
     name = row[Col.NAME.value]
     order = []
     for num, prod, color in [
-        (Col.NUM_DARK, Product.JERSEY, Color.DARK),
-        (Col.NUM_LIGHT, Product.JERSEY, Color.LIGHT),
-        (Col.NUM_DARK_LONG, Product.JERSEY_LONG, Color.DARK),
-        (Col.NUM_LIGHT_LONG, Product.JERSEY_LONG, Color.LIGHT),
+        (Col.NUM_DARK, Product.JERSEY, Color.BLUE),
+        (Col.NUM_LIGHT, Product.JERSEY, Color.WHITE),
+        (Col.NUM_DARK_LONG, Product.JERSEY_LONG, Color.BLUE),
+        (Col.NUM_LIGHT_LONG, Product.JERSEY_LONG, Color.WHITE),
         (Col.NUM_BLACK_LONG, Product.JERSEY_LONG, Color.BLACK),
-        (Col.NUM_DARK_TANK, Product.TANK, Color.DARK),
-        (Col.NUM_LIGHT_TANK, Product.TANK, Color.LIGHT),
+        (Col.NUM_DARK_TANK, Product.TANK, Color.BLUE),
+        (Col.NUM_LIGHT_TANK, Product.TANK, Color.WHITE),
     ]:
         order += get_similar_items(row, num, prod, Col.TYPE_JERSEY, Col.SIZE_JERSEY, color)
+
+    order += get_similar_items(row, Col.NUM_HEADBANDS, Product.HEADBAND, None, None, Color.DEFAULT)
+    order += get_similar_items(row, Col.NUM_SNOODS_WHITE, Product.SNOOD, None, None, Color.WHITE)
+    order += get_similar_items(row, Col.NUM_SNOODS_BLUE, Product.SNOOD, None, None, Color.BLUE)
     order += get_similar_items(row, Col.NUM_SHORTS, Product.SHORT, Col.TYPE_SHORTS, Col.SIZE_SHORTS, Color.DEFAULT)
     order += get_similar_items(row, Col.NUM_HOODIES_NO_ZIP, Product.HOODIE_NO_ZIP, Col.TYPE_HOODIES_NO_ZIP, Col.SIZE_HOODIES_NO_ZIP, Color.DEFAULT)
     order += get_similar_items(row, Col.NUM_HOODIES_ZIP, Product.HOODIE_ZIP, Col.TYPE_HOODIES_ZIP, Col.SIZE_HOODIES_ZIP, Color.DEFAULT)
@@ -240,14 +294,19 @@ def extract_items(row: pd.Series):
 def get_similar_items(row, num: Col, product: Product, type_: Col, size: Col, color=None):
     items = []
     if num:
-        item = Item(
-            product,
-            row[type_.value],
-            row[size.value],
-            color,
-            jersey_name='',
-            jersey_number='')
-        items += [item] * row[num.value]
+        try:
+            item = Item(
+                product,
+                row[type_.value] if type_ else None,
+                row[size.value] if size else None,
+                color,
+                jersey_name='',
+                jersey_number='')
+            quantity = row[num.value]
+            quantity = 0 if pd.isna(quantity) else int(quantity)
+            items += [item] * quantity
+        except KeyError:
+            pass
     return items
 
 
