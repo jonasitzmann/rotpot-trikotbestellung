@@ -1,9 +1,8 @@
 from enum import Enum
 
-
 class Color(Enum):
     WHITE = 'grey'
-    BLUE = 'blue'
+    DARK = 'dark'
     BLACK = 'black'
     DEFAULT = ''
 
@@ -17,6 +16,7 @@ class Product(Enum):
     HOODIE_ZIP = 'Kanpaia'
     SNOOD = 'Snood'
     HEADBAND = 'Headband'
+    GLOVES = 'Gloves'
 
 
 prices_adult = {
@@ -28,6 +28,7 @@ prices_adult = {
     Product.HOODIE_ZIP: 49,
     Product.SNOOD: 10,
     Product.HEADBAND: 4,
+    Product.GLOVES: 26
 }
 
 prices_kid = {Product.JERSEY: 26, Product.JERSEY_LONG: 31, Product.TANK: 23, Product.SHORT: 20}
