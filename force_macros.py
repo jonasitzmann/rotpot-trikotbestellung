@@ -17,6 +17,10 @@ class Product(Enum):
     SNOOD = 'Snood'
     HEADBAND = 'Headband'
     GLOVES = 'Gloves'
+    TIGHT_HALF = 'Half Leg'
+    TIGHT_KORSAIR = 'Korsair'
+    TIGHT_KORSAIR_PLUS = 'Korsair Plus'
+
 
 
 prices_adult = {
@@ -28,7 +32,10 @@ prices_adult = {
     Product.HOODIE_ZIP: 49,
     Product.SNOOD: 10,
     Product.HEADBAND: 4,
-    Product.GLOVES: 26
+    Product.GLOVES: 26,
+    Product.TIGHT_HALF: 22,
+    Product.TIGHT_KORSAIR: 35,
+    Product.TIGHT_KORSAIR_PLUS: 45,
 }
 
 prices_kid = {Product.JERSEY: 26, Product.JERSEY_LONG: 31, Product.TANK: 23, Product.SHORT: 20}

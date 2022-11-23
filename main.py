@@ -16,8 +16,9 @@ rotpot_cfg = dict(
     form_answers_id='1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ',
     player_infos_id='18faU7kEJMGFY7Orl8MvtOYUU21OUFskwfsw3fos85Ww',
     payment_info_id='1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ',
-    payment_info_gid=1389903084,
-    start_date="02.12.2021",
+    payment_info_gid=1474649789,
+    start_date="23.09.2022",
+    # start_date=None,
     end_date=None,
     prefix='rotpot',
     kids_design=False
@@ -63,10 +64,6 @@ def process_google_forms(form_answers_id, player_infos_id, payment_info_id, paym
         columns='Full name,Product,Gender / Type,Size,Name to be printed,Number to be printed,Special Requests,Price,Is kid,Description'.split(','))
     for _, row in df.iterrows():
         name, items = extract_items(row)
-        urgent = 'Zech Woortman Mama DJ Timme'.split()
-        if any([keyword in name for keyword in urgent]):
-            pass
-            # continue
         jersey_name, jersey_number = get_player_info(players_df, name)
         for item in items:
             item.full_name = name
@@ -283,6 +280,11 @@ class Col(Enum):
     NUM_HEADBANDS = 'Anzahl Headbands'
     NUM_SNOODS_WHITE = 'Anzahl Snoods Weiß'
     NUM_SNOODS_BLUE = 'Anzahl Snoods Blau'
+    NUM_TIGHTS_HALF = 'Anzahl (Tights) [Half Leg]'
+    NUM_TIGHTS_KORSAIR = 'Anzahl (Tights) [Korsair]'
+    NUM_TIGHTS_KORSAIR_PLUS = 'Anzahl (Tights) [Korsair Plus]'
+    TYPE_TIGHTS = 'Schnitt (Tights)'
+    SIZE_TIGHTS = 'Größe (Tights)'
     COMMENTS = 'Sonstige Anmerkungen'
 
 
@@ -307,6 +309,9 @@ def extract_items(row: pd.Series):
     order += get_similar_items(row, Col.NUM_HOODIES_NO_ZIP, Product.HOODIE_NO_ZIP, Col.TYPE_HOODIES_NO_ZIP, Col.SIZE_HOODIES_NO_ZIP, Color.DEFAULT)
     order += get_similar_items(row, Col.NUM_HOODIES_ZIP, Product.HOODIE_ZIP, Col.TYPE_HOODIES_ZIP, Col.SIZE_HOODIES_ZIP, Color.DEFAULT)
     order += get_similar_items(row, Col.NUM_GLOVES, Product.GLOVES, Col.TYPE_GLOVES, Col.SIZE_GLOVES)
+    order += get_similar_items(row, Col.NUM_TIGHTS_HALF, Product.TIGHT_HALF, Col.TYPE_TIGHTS, Col.SIZE_TIGHTS)
+    order += get_similar_items(row, Col.NUM_TIGHTS_KORSAIR, Product.TIGHT_KORSAIR, Col.TYPE_TIGHTS, Col.SIZE_TIGHTS)
+    order += get_similar_items(row, Col.NUM_TIGHTS_KORSAIR_PLUS, Product.TIGHT_KORSAIR_PLUS, Col.TYPE_TIGHTS, Col.SIZE_TIGHTS)
     return name, order
 
 
