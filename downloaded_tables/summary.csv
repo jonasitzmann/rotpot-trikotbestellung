@@ -1,6 +1,33 @@
-Bezahlt,Name,Preis,Anzahl full kits,Zusammenfassung,Kommentar,Stand: 27.4.2022 1:08 Uhr
-Nein,Christina Diercks,127,0,"jersey blue man L (34€), jersey white man L (34€), snood blue (10€), hoodie_zip man L (49€)",Beispiel,Bitte überweisen an:
-,,,,,,Kontoinhaber: Stefan Böhme?
-,,,,,,IBAN: ?
-,,,,,,BIC: ?
-,,,,,,Verwendungszweck: Trikots-Kids <Name wie in Tabelle>
+Bezahlt,Name,Preis,Anzahl full kits,Zusammenfassung,,,,,,,Bestellung,Mail
+Ja,Annika Nolte,38,0,jersey_long dark woman L (38€),,,,,,,OK,---
+Ja,Antonia Feldhusen,80,1,"jersey dark woman S (34€), jersey white woman S (34€), short multisport S (22€)",,,,,,,OK,gesendet
+Ja,C Hannes Drobek,38,0,jersey_long dark man L (38€),,,,,,,OK,---
+Ja,C Matthis Heimberg,38,0,jersey_long dark man L (38€),,,,,,,OK,---
+Ja,Carla Bambach,64,1,"jersey dark kid 10 (26€), short woman S (22€), jersey white kid 10 (26€)",,,,,,,OK,---
+Ja,Charlotte Bambach,48,0,"jersey dark kid 8 (26€), short woman S (22€)",,,,,,,OK,---
+Ja,Dylan Drage,62,1,"jersey dark kid 10 (26€), jersey white kid 10 (26€), short multisport kid 8 (20€)",,,,,,,OK,gesendet
+Ja,Fabian Koch,80,1,"jersey dark man S (34€), jersey white man S (34€), short multisport S (22€)",,,,,,,OK,gesendet
+Ja,Feline Feldhusen,56,0,"jersey dark woman S (34€), short multisport S (22€)",,,,,,,OK,gesendet
+Ja,Franciska Ecker,26,0,jersey dark kid 10 (26€),,,,,,,OK,gesendet
+Ja,Friederike Schädel,56,0,"jersey dark woman L (34€), short multisport M (22€)",,,,,,,OK,gesendet
+Ja,Hannes Drobek,60,0,"jersey_long white man L (38€), short multisport XL (22€)",,,,,,,OK,---
+Nein,Hannes Gremmels,34,0,jersey white man L (34€),,,,,,,Name fehlt auf weißem Shirt,gesendet
+Ja,Henriette Feldhusen,64,1,"jersey dark kid 10 (26€), jersey white kid 10 (26€), short multisport XS (22€)",,,,,,,OK,gesendet
+Ja,Ineke Schmiegel,48,0,"jersey dark kid 10 (26€), short multisport XS (22€)",,,,,,,OK,gesendet
+Ja,Ingo Schmiegel,56,0,"jersey dark man L (34€), short multisport M (22€)",,,,,,,OK,gesendet
+Ja,Insa Schmiegel,46,0,"jersey dark kid 8 (26€), short multisport kid 8 (20€)",,,,,,,OK,gesendet
+Ja,Jannis Hellmann,56,0,"jersey dark man XS (34€), short multisport XS (22€)",,,,,,,OK,gesendet
+Ja,Julia Busse,80,0,"tank dark woman L (29€), short woman L (22€), tank white woman L (29€)",,,,,,,OK,
+Ja,Leopold Lautsch,88,1,"jersey_long dark man M (38€), jersey_long white man M (38€), short multisport M (22€)",,,,,,,OK,---
+Ja,Luise Feldhusen,106,1,"jersey white woman M (34€), jersey_long dark woman M (38€), short multisport M (22€), short woman M (22€)",,,,,,,OK,gesendet
+Ja,Marc Blumentritt,68,0,"jersey dark man XL (34€), jersey white man XL (34€)",,,,,,,OK,gesendet
+Ja,Mathilda Blumentritt,68,0,"jersey dark woman M (34€), jersey white woman M (34€)",,,,,,,OK,gesendet
+Ja,Mátyás Ecker,34,0,jersey dark man XS (34€),,,,,,,OK,gesendet
+Ja,Ole Blumentritt,68,0,"jersey dark man XS (34€), jersey white man XS (34€)",,,,,,,OK,gesendet
+Ja,Sören Petersen,80,1,"jersey dark man M (34€), jersey white man M (34€), short long M (22€)",,,,,,,OK,---
+Ja,Tammo Warecka,118,1,"jersey dark man XS (34€), jersey white man XS (34€), jersey_long dark man XS (38€), short multisport XS (22€)",,,,,,,OK,gesendet
+Nein,Timo Zeroch,68,0,"jersey dark man L (34€), jersey white man L (34€)",,,,,,,Name fehlt auf weißem Shirt,gesendet
+Ja,Tobias Krasnodembski,26,0,jersey dark kid 10 (26€),,,,,,,OK,gesendet
+Ja,Hendrik Linder,68,0,"jersey dark man, jersey white man",,,,,,,OK,gesendet
+Ja,Sebastian Homann,86,0,"jersey dark kid, jersey dark kid, jersey dark man",,,,,,,OK,gesendet
+Ja,Leif Junius,68,0,"jersey dark man, jersey white man",,,,,,,OK,gesendet

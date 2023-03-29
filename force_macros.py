@@ -17,9 +17,9 @@ class Product(Enum):
     SNOOD = 'Snood'
     HEADBAND = 'Headband'
     GLOVES = 'Gloves'
-    TIGHT_HALF = 'Half Leg'
+    TIGHT_HALF = 'Half_Leg'
     TIGHT_KORSAIR = 'Korsair'
-    TIGHT_KORSAIR_PLUS = 'Korsair Plus'
+    TIGHT_KORSAIR_PLUS = 'Korsair_Plus'
 
 
 

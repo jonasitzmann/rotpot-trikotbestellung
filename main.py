@@ -17,9 +17,8 @@ rotpot_cfg = dict(
     player_infos_id='18faU7kEJMGFY7Orl8MvtOYUU21OUFskwfsw3fos85Ww',
     payment_info_id='1xOnqs-DSKLaIjb3bCxPzd-EgMSz3j9KQ2tJyan5M5eQ',
     payment_info_gid=1474649789,
-    start_date="23.09.2022",
-    # start_date=None,
-    end_date=None,
+    # start_date="23.09.2022",
+    # end_date=None,
     prefix='rotpot',
     kids_design=False
 )
@@ -29,8 +28,8 @@ kids_cfg = dict(
     player_infos_id='1IaqBGPRLDBqFdpOT_YzM2o0eMKb8jv3gM97RKkLuzlk',
     payment_info_id='1JUlX7qOaaEINtQlzFd4yXUXie9H2EAdvSw9Q5AFao5Y',
     payment_info_gid=1320287528,
-    start_date="02.12.2021",
-    end_date="15.08.2022",
+    # start_date="02.12.2021",
+    # end_date="15.08.2022",
     prefix='kids',
     kids_design=True
 )
@@ -38,7 +37,7 @@ kids_cfg = dict(
 
 def main():
     process_google_forms(**rotpot_cfg)
-    # process_google_forms(**kids_cfg)
+    process_google_forms(**kids_cfg)
 
 
 def process_google_forms(form_answers_id, player_infos_id, payment_info_id, payment_info_gid, prefix, kids_design, start_date=None, end_date=None):
